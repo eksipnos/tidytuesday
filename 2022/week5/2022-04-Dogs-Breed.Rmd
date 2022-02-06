@@ -1,0 +1,128 @@
+---
+title: "Dog Breeds"
+date: "2 2 2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggimage)
+```
+
+## Context
+
+<https://eu.usatoday.com/picture-gallery/life/2021/06/28/the-50-most-popular-dog-breeds-in-america/45134329/>
+
+<https://www.vox.com/2016/8/31/12715176/most-popular-dog-breeds>
+
+280 breeds
+
+these dogs are registered through the [American Kennel Club](http://www.akc.org/dog-breeds/) (AKC), which categorizes and tallies up the totals of more than 150 breeds.
+
+> In 1991, the Labrador retriever became the most popular dog --- and for the past 25 years it has retained its throne
+>
+> psychology professor Hal Herzog laid out what he called the "cultural
+> drift" effect: Instead of studying up on various breeds, **dog owners tend
+> to mimic the choices of others** --- neighbors, friends, celebrities.
+>
+> "**breeds enjoy heydays of approximately 25 years** ... [which] usually allows
+> for two to three generations of dogs, as the breed transforms from
+> novel to passé."
+>
+>
+## R Import
+
+```{r import}
+
+breed_traits <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-02-01/breed_traits.csv')
+
+trait_description <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-02-01/trait_description.csv')
+
+breed_rank_all <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-02-01/breed_rank.csv')
+```
+
+## EDA
+
+```{r}
+
+
+Top <- breed_rank_all %>% 
+  janitor::clean_names() %>% 
+  select(-links) %>% 
+  pivot_longer(x2013_rank:x2020_rank,
+               names_to = "year", 
+               values_to = "Rank") %>% 
+  mutate(year = parse_number(year)) %>% 
+  filter(year == 2020) %>% 
+  slice_head(n = 10) 
+
+
+# make breed_traits long
+variables_long <- breed_traits %>% 
+  select(-c(`Coat Type`, `Coat Length`)) %>% 
+  pivot_longer(-Breed, 
+               names_to = "variable", 
+               values_to = "Trait_score") %>% 
+  rename(breed = Breed) %>% 
+  drop_na()
+
+# Filter for Top 10 dogs in Year 2020
+
+filtered <- variables_long %>% 
+  full_join(Top, by = "breed") %>% 
+  drop_na(image, Trait_score, variable) 
+```
+
+## Graphic
+
+```{r}
+
+ ggplot(filtered, 
+       aes(x = variable, 
+           y = breed, 
+           fill = Trait_score)) +
+  geom_tile(color = "white", 
+            size = 0.2) +
+  labs(
+    title = "Trait Scores of Selected Dog breeds", 
+    subtitle = "in the Year 2020"
+  ) +
+  scale_fill_viridis_b(
+    direction = -1,
+    n.breaks = 5, 
+    option = "D", 
+    name = "Trait Score",
+    guide = guide_colorbar(
+      frame.colour = "black",
+      ticks.colour = "black",
+      ticks.linewidth = grid::unit(1, "inch"),
+      direction = "horizontal", 
+      title.position = "top" 
+      #label.position = "bottom"
+    )
+  )  + 
+  scale_y_discrete(name = NULL,  # instead of axis.title = element_blank()
+                   expand = c(0,0)) +
+ # https://www.tidyverse.org/blog/2020/03/ggplot2-3-3-0/
+  scale_x_discrete(name = NULL, 
+                   expand = c(0,0), 
+                   guide = guide_axis(n.dodge = 3)) +
+  theme(
+    plot.title = element_text(size = 14, 
+                              face = "bold"),
+    plot.subtitle = element_text(size = 12, 
+                                 margin = margin(b = 5)),
+    legend.position = "top", 
+    axis.text = element_text(size = 08, 
+                             color = "#222222"),
+    axis.ticks = element_blank(), 
+    plot.margin = margin(0.5, 0.5, 0.5, 0.5, "cm"))
+```
+
+## Save 
+
+```{r}
+
+ggsave("DogsBreed.png")
+```
