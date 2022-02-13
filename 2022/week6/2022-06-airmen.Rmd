@@ -1,0 +1,52 @@
+---
+title: "Wee6-Tuskegee"
+date: "9 2 2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+
+```
+
+## Context
+
+<https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-02-08/readme.md>
+
+The Tuskegee Airmen /tʌsˈkiːɡiː/[1] were a group of primarily African American military pilots (fighter and bomber) and airmen who fought in World War II.
+
+## Data
+
+```{r cars}
+airmen <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-02-08/airmen.csv')
+
+
+p <- airmen %>% 
+  group_by(state) %>% 
+  summarise(n = n()) %>% 
+  drop_na(state)
+
+ggplot(p, aes(x = n, y = fct_reorder(state, n))) +
+  geom_point(size = 2, color = "#13678A")  +
+  scale_x_continuous(
+    name = NULL, 
+    limits = c(0, 110), 
+    breaks = c(0, 20, 40, 60, 80, 100)) +
+  scale_y_discrete(name = NULL) +
+  labs(title = "State origin of Tuskegee Airmen", 
+       subtitle = "Number of people from each state") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12, 
+                                 margin = margin(b = 5)),
+    panel.grid.major.x = element_blank(),
+    axis.text.y = element_text(size = 8),
+    axis.text.x = element_text(size = 8), 
+    plot.margin = margin(0.5, 0.5 , 0.5 , 0.5 , "cm"),
+    plot.background = element_rect(fill = "#ffffff")
+    )
+
+ggsave("Tuskegee-airmen.png")
+```
