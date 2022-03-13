@@ -1,0 +1,83 @@
+---
+title: "Erasmus"
+author: "eksipnos"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+Erasmus: <https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-03-08/readme.md>
+
+## Import
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggforce)
+library(countrycode)
+library(geofacet)
+library(showtext)
+
+erasmus <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-03-08/erasmus.csv')
+
+font_add_google("Source Sans Pro", "sourcesans")
+```
+
+## Theme
+
+```{r}
+
+theme_custom <- theme(
+  text = element_text(family = "sourcesans"), 
+  plot.margin = margin(0.5,0.5,0.5,0.5, "cm"), 
+  plot.background = element_rect(fill = "white", 
+                                 colour = "white")
+)
+
+theme_set(theme_light() + theme_custom)
+```
+
+## Data
+
+```{r data}
+
+erasmus1 <- erasmus %>%  
+  select(academic_year, receiving_country_code, participants) %>% 
+  mutate(academic_year = str_sub(academic_year, -4L)) %>% 
+   mutate(country1 = case_when(
+    receiving_country_code == "EL" ~ "GR",
+    receiving_country_code == "UK" ~ "GB", 
+    TRUE ~ receiving_country_code)) %>% 
+  mutate(country2 = countrycode(country1,
+                               origin = "iso2c",  destination = "country.name")) %>% 
+  select(-c(receiving_country_code, country1)) %>% 
+  rename(country = country2) %>% 
+   group_by(academic_year, country) %>% 
+  summarize(total = sum(participants)) 
+  
+```
+
+## Graph
+
+```{r graph}
+(p <- ggplot(erasmus1, aes(x = academic_year, 
+             total, 
+             group = country)) + 
+  geom_col() +
+  facet_geo(~country, grid = "eu_grid1") +
+  labs(title = "Development of ERASMUS students", 
+       subtitle = "Receiving countries in year 2019-2020", 
+       x= "", 
+       y = "")) 
+
+```
+
+## Save
+
+```{r save}
+
+
+ggsave("2022-10-erasmus.png", 
+       p, 
+       dpi = 300)
+```
