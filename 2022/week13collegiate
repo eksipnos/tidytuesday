@@ -1,0 +1,128 @@
+---
+title: "2022-13-CollegiateSportsBudgets"
+format: html
+editor: visual
+---
+
+## Collegiate Sports
+
+-   Basketball
+
+-   in 2019
+
+-   per team arranged (desc) by absolute total revenue
+
+-   on **available** data
+
+```{r}
+
+library(tidyverse)
+library(showtext)
+library(scales)
+library(ggtext)
+
+
+showtext::showtext_opts(dpi = 300)
+
+font_add_google("Source Sans Pro", "sans")
+
+
+sports <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-03-29/sports.csv')
+```
+
+## Data
+
+filter with is.na() , see [here](https://stackoverflow.com/questions/43938863/dplyr-filter-with-condition-on-multiple-columns)
+
+```{r data}
+
+
+sports1 <- sports %>% 
+  select(institution_name, rev_men, rev_women, total_rev_menwomen, year, sports) %>% 
+  filter(year == 2019, sports == "Basketball") %>% 
+     # filter(across(c(rev_men, rev_women, exp_men, exp_women), ~!is.na(.x))) %>%   
+   filter(if_all(c(rev_men, rev_women, total_rev_menwomen), ~!is.na(.))) %>%  
+  mutate(diff_men = round(rev_men/total_rev_menwomen, digits = 2), 
+         diff_women = round(rev_women/total_rev_menwomen, digits = 2)) %>% 
+  slice_max(total_rev_menwomen, n = 20) %>% 
+  select(-c(year, sports)) %>% 
+  pivot_longer(
+    cols = c(diff_men, diff_women), 
+    names_to = "type", 
+    values_to = "percent"
+  ) %>% 
+  select(-c(rev_men, rev_women))
+  
+#ordered by revenue and marked by color
+
+sports2 <- sports1 %>% 
+  mutate(
+    type = factor(type, 
+                  levels = c("diff_men", "diff_women")), 
+    institution_name = fct_reorder(institution_name, 
+                                   total_rev_menwomen,
+                                   .desc = F)
+  ) %>% 
+  mutate(
+    colors = case_when(
+      type  == "diff_women" & percent > 0.1 ~ "#F2C811FF", 
+      TRUE  ~ "#5F6B6DFF"   # color scale paletteer::qPBI
+    )
+  )
+```
+
+## Plot
+
+```{r plot}
+
+
+(p1 <- ggplot(sports2, aes(x = percent, y = institution_name)) +
+  geom_col(
+    col = "white",
+    fill = sports2$colors   # only works with $ reference
+  ) +
+  scale_x_continuous(
+    breaks = seq(0.1, 0.9, 0.2),
+    labels = scales::percent,
+    position = "top"
+  ) +
+  coord_cartesian(
+    xlim = (c(0,1)), 
+    expand = F,
+    #clip = "off"
+  ) +
+     geom_text(
+    data = sports1 %>% filter(type == "diff_women" & percent > 0.1), 
+    aes(x = 1, 
+        label = scales::percent(percent, accuracy = 1)), 
+    hjust = 1.1, 
+    col = "white", 
+    size = 4
+  ) +
+  geom_text(
+    aes(x = 0, 
+        label = glue::glue("{institution_name} ${total_rev_menwomen}"), 
+    #col = "white", 
+    hjust = -0.01
+  )) +
+  labs(title = "Split of Basketball revenue between <span style = 'color: #5F6B6DFF'>men </span>and <span style = 'color:#F2C811FF'>woman </span>",
+       subtitle = "in 2019 arranged by highest revenue colleges", 
+       x = "", 
+       y = "") +
+  theme(
+    axis.text.y = element_blank(),
+    text = element_text(colour = "#5F6B6DFF", 
+                        family = "sans"),
+    axis.ticks.y = element_blank(),
+    plot.title = element_markdown(size = 16, 
+                                  color = "black"), 
+    plot.subtitle = element_markdown(size = 12, 
+                                  color = "black", 
+                                  margin(b = 5))
+  ))
+```
+
+```{r}
+ggsave("2018-13-basketball.png")
+
+```
