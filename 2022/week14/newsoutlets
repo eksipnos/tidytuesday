@@ -1,0 +1,75 @@
+---
+title: "Week 14 - Digital Publications"
+format: html
+editor: visual
+---
+
+## Libraries
+
+```{r}
+
+library(tidyverse)
+library(paletteer)
+library(ggtext)
+library(ggfittext)
+library(treemapify)
+library(showtext)
+library(wesanderson)
+library(paletteer)
+library(MetBrewer)
+
+font_add_google("Montserrat", "serrat")
+showtext_opts(dpi = 300)
+showtext_auto(enable = TRUE)
+
+camcorder::gg_record(
+  dir = 'img', dpi = 300)
+```
+
+## Data + Wrangling
+
+```{r}
+
+news <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-04-05/news_orgs.csv')
+```
+
+```{r}
+
+news_n <- news %>% 
+  group_by(state) %>% 
+  mutate(count = n(), 
+         label = paste0(state, "\n(", count, ")")) %>% 
+    select(state, count, label) %>% 
+  distinct(state, count, label) %>% 
+  filter(!is.na(state)) %>% 
+  ungroup()
+```
+
+## Plotting
+
+```{r}
+
+ggplot(news_n, aes(area = count, fill = state, label = label)) +
+  geom_treemap(size = 1, 
+               colour = "black") +
+  geom_treemap_text(colour = "white", 
+                    place = "center", 
+                    size = 20,
+                    family = "serrat") +
+  scale_fill_manual(values = met.brewer("VanGogh2", n = 58))   + 
+  labs(title = "Number of Local news outlets in US States") +
+  theme(
+    legend.position = "none", 
+    plot.title = element_text(hjust = .5, 
+                              size = 18,
+                              face = "bold"), 
+  )
+
+```
+
+## Save
+
+```{r}
+
+ggsave("2022-14-newsoutlets.png", dpi = 300)
+```
